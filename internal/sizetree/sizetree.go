@@ -16,19 +16,30 @@ func New() *SizeTree  {
   }
 }
 
-// FileSizeEntry is a representation of a single file on the filesystem
-// consisting of its name, path, and size.  These are the parameters needed
-// to both identify a file and sort/search it by filesize.
-type FileSizeEntry struct {
-  Path  string 
-  Name  string 
+// SizeTreeEntry is a single node in the SizeTree btree structure. It is indexed
+// on the size of the file, and contains a slice of files which share this size.
+type SizeTreeEntry struct {
   Size  int64
+  files   []string
 }
 
-func NewFileSizeEntry(path string, name string, size int64) *FileSizeEntry {
-  return &FileSizeEntry{
-    Path: path,
-    Name: name,
+// NewSizeTreeEntry() returns a pointer to a SizeTreeEntry, with initialized parameters.
+func NewSizeTreeEntry (size int64, files []string) *SizeTreeEntry {
+  return &SizeTreeEntry{
     Size: size,
+    files: files,
   }
 }
+
+// Append() method appends a file to the SizeTreeEntry.
+func (s *SizeTreeEntry) Append(file string) {
+  s.files = append(s.files, file)
+}
+
+// Less() compares a SizeTreeEntry to another SizeTreeEntry 
+// this is required to satisfy the btree.Item interface 
+func (a SizeTreeEntry) Less(b btree.Item) bool {
+	return a.Size < b.(*SizeTreeEntry).Size
+}
+
+
