@@ -3,6 +3,7 @@ module github.com/jessegalley/fsdupscan
 go 1.22.1
 
 require (
+	github.com/google/btree v1.1.2
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 )

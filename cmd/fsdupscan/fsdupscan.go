@@ -5,7 +5,9 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sync"
+	"time"
 
 	// "path/filepath"
 	// "sync"
@@ -85,6 +87,13 @@ func init() {
   setupLogger()
 }
 
+
+type FileEntry struct {
+  path  string 
+  name  string 
+  size  int64
+}
+
 func main() { 
   slog.Info("main", "working", "working")
   slog.Debug("pos args", "args", positionalArgs)
@@ -94,53 +103,87 @@ func main() {
   // concurrent scan actions
   // var wg sync.WaitGroup
   // sem := make(chan struct{}, viper.GetInt("threads"))
-  dirCh := make(chan string, 1)
-  // fileCh := make(chan os.FileInfo, 1)
+  // dirCh := make(chan string, 1)
+  fileCh := make(chan FileEntry, 1)
   
   // add all of the paths provided as positionalArgs to the directory channel
   // if there were no positional args provided, then assume CWD and add that
   // to the directory channel
-  go func ()  {
-    if len(positionalArgs) == 0 {
-      dirCh <- "."
-    } else {
-      for _, path := range positionalArgs {
-        dirCh <- path
-      }
-    }  
-  }()
+  // go func ()  {
+  //   if len(positionalArgs) == 0 {
+  //     dirCh <- "."
+  //   } else {
+  //     for _, path := range positionalArgs {
+  //       dirCh <- path
+  //     }
+  //   }  
+  // }()
   
   var wg sync.WaitGroup
-  wg.Add(1)
+  // wg.Add(1)
+  
+  for _, path := range positionalArgs {
+    wg.Add(1)
+    go walk(path, &wg, fileCh)
+  }
+
+  filesProcessed := 0
   go func ()  {
-    defer wg.Done()
     for {
       select {
-      case dir, ok := <- dirCh:
-        //do something with dir 
-        slog.Debug("dirCh processing", "dir", dir)
+      case entry, ok := <- fileCh:
         if !ok {
+          slog.Debug("main():processFiles", "fileCh", "closed")
           return
         }
+        if viper.GetBool("verbose") {
+          fmt.Println(entry.path, entry.name, entry.size)
+        }
+        filesProcessed++
       }
     }
   }()
-
+  
   wg.Wait()
-  // for each directory given in positional args 
-  // validate that the path exists
-  // then start a walk of that filepath
-  // if there was no positional args specified, start walk on current directory 
-
-  // for _, path := range positionalArgs {
-  //   wg.Add(1)
-  //   walkDir(path, &wg, sem)
-  //   walkPath(path, &wg, )
-  // }
-  //
-  // wg.Wait()
+  slog.Debug("finishing up")
+  time.Sleep(1 * time.Second)
+  close(fileCh)
+  slog.Info("files", "processed", filesProcessed)
 }
 
+func walk(dir string, wg *sync.WaitGroup, fileCh chan<- FileEntry) {
+  defer wg.Done()
+
+  entries, err := os.ReadDir(dir)
+  if err != nil {
+    panic(err) //TODO: handle erorrs correct inside recusive func 
+  }
+  
+  for _, entry := range entries {
+    if entry.IsDir() {
+      wg.Add(1)
+      go walk(filepath.Join(dir, entry.Name()), wg, fileCh)
+    } else if entry.Type().IsRegular() {
+      // finfo, err := entry.Info()
+      // if err != nil {
+      //   slog.Debug("walk()", "error reading FileInfo", err)
+      //   panic(err) //TODO: handle error correct inside recusive func
+      // } 
+      finfo, err := entry.Info()
+      if err != nil {
+        panic(err)
+      }
+      fentry := FileEntry{
+        name: entry.Name(),
+        path: dir,
+        size: finfo.Size(),
+      }
+      fileCh <- fentry 
+    } else {
+      slog.Debug("unknown filfinfo type", "file", filepath.Join(dir, entry.Name()), "type", entry.Type())
+    }
+  }
+}
 // func walkDir(dir string, wg *sync.WaitGroup, sem chan struct{}) {
 //   defer wg.Done()
 //
