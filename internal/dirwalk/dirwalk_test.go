@@ -1,6 +1,7 @@
 package dirwalk_test
 
 import (
+	// "fmt"
 	"os"
 	"path/filepath"
 
@@ -8,6 +9,7 @@ import (
 	"sync"
 	"testing"
 
+	// "github.com/davecgh/go-spew/spew"
 	"github.com/jessegalley/fsdupscan/internal/dirwalk"
 	"github.com/stretchr/testify/assert"
 )
@@ -32,6 +34,11 @@ func TestDirwalk(t *testing.T) {
       case entry, ok := <-fileCh:
         if ok {
           files = append(files, filepath.Join(basePath,entry.Name())) 
+          // fmt.Println(os.ModeSymlink)
+          // spew.Dump(entry)
+          // spew.Dump(entry.Type())
+          // fmt.Println(entry.Type())
+          // spew.Dump(entry.Info())
         } else {
           return
         }
@@ -40,7 +47,14 @@ func TestDirwalk(t *testing.T) {
   }()
 
   wg.Wait()
-  assert.Equal(t, len(files), 2)
+  assert.Equal(t, 18, len(files))
+
+  // for _, entry := range files {
+  //   // spew.Dump(entry)
+  // }
 }
 
-
+func isSymlink(file os.DirEntry) bool {
+  mode := file.Type()
+  return mode & os.ModeSymlink != 0
+}
