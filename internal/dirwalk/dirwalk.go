@@ -1,12 +1,13 @@
 package dirwalk
 
 import (
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
 )
 
-func Walk(dir string, fileCh chan<- os.DirEntry) {
+func Walk(dir string, fileCh chan<- os.DirEntry, followSym bool) {
   entries, err := readDirRegular(dir)
   if err != nil {
     // we shouldn't get here
@@ -16,9 +17,27 @@ func Walk(dir string, fileCh chan<- os.DirEntry) {
 
   for _, entry := range entries {
     if entry.IsDir() {
-      Walk(filepath.Join(dir, entry.Name()), fileCh)
+      Walk(filepath.Join(dir, entry.Name()), fileCh, followSym)
     } else if entry.Type().IsRegular() {
       fileCh <- entry
+    } else if isSymlink(entry) {
+      if !followSym {
+        continue
+      }
+      // target, err := resolveSymlink(entry, dir)
+      // if err != nil {
+      //   panic(err)
+      // }
+      // 
+      // statTarget := target
+      // if !filepath.IsAbs(target) {
+      //   statTarget = filepath.Join(dir, target)
+      // }
+      // fileInfo, err := os.Stat(statTarget)
+      // if err != nil {
+      //   //TODO: what does a failed stat() mean here? broken symlink?
+      //   panic(err)
+      // }
     } else {
       slog.Debug("dirwalk::walk() unknown entry.Type()", "Type()", entry.Type())
       continue
@@ -26,12 +45,41 @@ func Walk(dir string, fileCh chan<- os.DirEntry) {
   }
 }
 
+// readDirRegular reads the entries in a directory path
 func readDirRegular(dir string) ([]os.DirEntry, error) { 
   entries, err := os.ReadDir(dir)
   if err != nil {
     return nil, err
-    // log.Fatal(err)
   }
 
   return entries, nil
 }
+
+// isSymlink chcks to see if the given file DirEntry is is a symlink. 
+// returns bool 
+func isSymlink(file os.DirEntry) bool {
+  mode := file.Type()
+  return mode & os.ModeSymlink != 0
+}
+
+// resolveSymlink attempts to resolve a the target of a symlink at File 
+// located at path. will return an error if file is not a symlink or fails 
+// to be read.  Returns a string of the link target which could be a 
+// relative or absolute path.
+func resolveSymlink(file os.DirEntry, dir string) (string, error) {
+  linkpath := filepath.Join(dir, file.Name())
+  if !isSymlink(file){
+    slog.Debug("diwalk resolveSymlink() not a link", "link", linkpath)
+    return "", errors.New("calling resolveSymlink on not a link")
+  }
+
+  target, err := os.Readlink(linkpath)
+  if err != nil {
+    slog.Debug("diwalk resolveSymlink() failed to reoslve", "link", linkpath)
+    return "", err
+  }
+
+  return target, nil
+}
+
+

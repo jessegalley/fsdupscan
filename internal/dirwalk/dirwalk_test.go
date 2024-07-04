@@ -24,7 +24,8 @@ func TestDirwalk(t *testing.T) {
   wg.Add(1)
   go func ()  {
     defer wg.Done()
-    dirwalk.Walk(basePath, fileCh)
+    followSym := false
+    dirwalk.Walk(basePath, fileCh, followSym)
   }()
 
   files := []string{}
@@ -54,7 +55,4 @@ func TestDirwalk(t *testing.T) {
   // }
 }
 
-func isSymlink(file os.DirEntry) bool {
-  mode := file.Type()
-  return mode & os.ModeSymlink != 0
-}
+
