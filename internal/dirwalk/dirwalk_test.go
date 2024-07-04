@@ -3,8 +3,6 @@ package dirwalk_test
 import (
 	"testing"
 
-	// "github.com/davecgh/go-spew/spew"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jessegalley/fsdupscan/internal/dirwalk"
 	"github.com/stretchr/testify/assert"
 )
@@ -47,7 +45,7 @@ func TestDirwalk(t *testing.T) {
   wgWalk.Wait()
   assert.Equal(t, 18, len(files))
 
-  spew.Dump(files)
+  // spew.Dump(files)
   // for _, entry := range files {
   //   // spew.Dump(entry)
   // }
