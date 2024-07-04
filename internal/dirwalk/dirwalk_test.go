@@ -24,7 +24,7 @@ func TestDirwalk(t *testing.T) {
   // }()
 
   fileCh, wgWalk := dirwalk.Walk(basePath)
-  files := []string{}
+  files := []*dirwalk.WalkedFile{}
   go func ()  {
     for {
       select {

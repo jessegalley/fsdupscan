@@ -6,19 +6,35 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
+
+	// "github.com/davecgh/go-spew/spew"
 )
 
+type WalkedFile struct {
+  Path string 
+  Inode uint64
+  Size  int64 
+}
 
-func Walk(dir string) (<-chan string, *sync.WaitGroup) {
+func NewWalkedFile(path string, inode uint64, size int64) *WalkedFile {
+  return &WalkedFile{
+    Path: path,
+    Inode: inode,
+    Size: size,
+  }
+}
+
+func Walk(dir string) (<-chan *WalkedFile, *sync.WaitGroup) {
   var wg sync.WaitGroup
-  fileCh := make(chan string, 1)
+  fileCh := make(chan *WalkedFile, 1)
   wg.Add(1)
   go WalkDir(dir, &wg, fileCh)
 
   return fileCh, &wg
 }
 
-func WalkDir(dir string, wg *sync.WaitGroup, fileCh chan<- string) {
+func WalkDir(dir string, wg *sync.WaitGroup, fileCh chan<- *WalkedFile) {
   defer wg.Done()
 
   visit := func (path string, file os.FileInfo, err error) error {
@@ -28,7 +44,9 @@ func WalkDir(dir string, wg *sync.WaitGroup, fileCh chan<- string) {
       return filepath.SkipDir
     }
     if file.Mode().IsRegular() {
-      fileCh <- filepath.Join(path, file.Name())
+      // spew.Dump(file.Sys().(*syscall.Stat_t).Ino)
+      inode := file.Sys().(*syscall.Stat_t).Ino
+      fileCh <- NewWalkedFile(filepath.Join(path, file.Name()), inode, file.Size())   
       slog.Debug("WalkDir visit file found", "path", path, "name", file.Name(), "size", file.Size())
     }
     return nil

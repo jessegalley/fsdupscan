@@ -7,7 +7,14 @@ import "github.com/google/btree"
 // into the SizeTreeEntrys
 type SizeTreeFile struct {
   Path string
-  Inode int64
+  Inode uint64
+}
+
+func NewSizeTreeFile(path string, inode uint64) *SizeTreeFile {
+  return &SizeTreeFile{
+    Path: path,
+    Inode: inode,
+  }
 }
 
 // type SizeTree is a wrapper to google's btree, providing a
