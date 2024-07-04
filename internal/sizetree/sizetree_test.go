@@ -20,11 +20,14 @@ func TestNewSizeTree(t *testing.T) {
 func TestReplaceOrInsert(t *testing.T) {
   st := sizetree.New()
 
-  e := sizetree.NewSizeTreeEntry(1000, []string{"/test/file/one"})
+  f1 := sizetree.SizeTreeFile{Path: "/test/file/one", Inode: 100001}
+  f2 := sizetree.SizeTreeFile{Path: "/test/file/two", Inode: 100002}
+
+  e := sizetree.NewSizeTreeEntry(1000, []sizetree.SizeTreeFile{f1})
   node := st.ReplaceOrInsert(e) 
   assert.Nil(t, node)
 
-  e2 := sizetree.NewSizeTreeEntry(1000, []string{"/test/file/two"})
+  e2 := sizetree.NewSizeTreeEntry(1000, []sizetree.SizeTreeFile{f2})
   node2 := st.ReplaceOrInsert(e2)
   assert.Same(t, e, node2)
 }
@@ -34,7 +37,9 @@ func TestReplaceOrInsert(t *testing.T) {
 func TestGet(t *testing.T) {
   st := sizetree.New()
 
-  e1 := sizetree.NewSizeTreeEntry(1000, []string{"/test/file/one"})
+  f1 := sizetree.SizeTreeFile{Path: "/test/file/one", Inode: 100001}
+  e1:= sizetree.NewSizeTreeEntry(1000, []sizetree.SizeTreeFile{f1})
+
   item1 := st.ReplaceOrInsert(e1)
   assert.Nil(t, item1)
 
@@ -51,7 +56,9 @@ func TestGet(t *testing.T) {
 func TestGetBySize(t *testing.T) {
   st := sizetree.New()
 
-  e1 := sizetree.NewSizeTreeEntry(1000, []string{"/test/file/one"})
+  f1 := sizetree.SizeTreeFile{Path: "/test/file/one", Inode: 100001}
+  e1:= sizetree.NewSizeTreeEntry(1000, []sizetree.SizeTreeFile{f1})
+
   item1 := st.ReplaceOrInsert(e1)
   assert.Nil(t, item1)
   
@@ -64,52 +71,55 @@ func TestGetBySize(t *testing.T) {
 
 // Test appending an additional filename to a SizeTreeEntry
 func TestAppend(t *testing.T) {
-  // st := sizetree.New()
 
-  e1 := sizetree.NewSizeTreeEntry(1000, []string{"/file/one"})
-  // item1 := st.ReplaceOrInsert(e1)
-  // assert.Nil(t, item1)
-
-  e1.Append("/test/two")
+  f1 := sizetree.SizeTreeFile{Path: "/test/file/one", Inode: 100001}
+  f2 := sizetree.SizeTreeFile{Path: "/test/file/two", Inode: 100002}
+  e1:= sizetree.NewSizeTreeEntry(1000, []sizetree.SizeTreeFile{f1})
+  e1.Append(f2)
 
   files := e1.Files()
   assert.Equal(t, len(files), 2)
 
-  assert.Equal(t, files[0], "/file/one")
-  assert.Equal(t, files[1], "/test/two")
+  assert.Equal(t, files[0], f1)
+  assert.Equal(t, files[1], f2)
 }
 
 // tests merging two SizeTreeEntry's files into one 
 func TestMerge(t *testing.T) {
-  e1 := sizetree.NewSizeTreeEntry(1000, []string{"/file/one"})
-  e2 := sizetree.NewSizeTreeEntry(1000, []string{"/test/two"})
+  f1 := sizetree.SizeTreeFile{Path: "/test/file/one", Inode: 100001}
+  f2 := sizetree.SizeTreeFile{Path: "/test/file/two", Inode: 100002}
+
+  e1 := sizetree.NewSizeTreeEntry(1000, []sizetree.SizeTreeFile{f1})
+  e2 := sizetree.NewSizeTreeEntry(1000, []sizetree.SizeTreeFile{f2})
 
   e1.Merge(e2)
   files := e1.Files()
   assert.Equal(t, len(files), 2)
 
-  assert.Equal(t, files[0], "/file/one")
-  assert.Equal(t, files[1], "/test/two")
+  assert.Equal(t, files[0], f1)
+  assert.Equal(t, files[1], f2)
 }
 
 func TestMergOrInsert(t *testing.T) {
   st := sizetree.New()
+ 
+  f1 := sizetree.SizeTreeFile{Path: "/test/file/one", Inode: 100001}
+  f2 := sizetree.SizeTreeFile{Path: "/test/file/two", Inode: 100002}
 
-  e1 := sizetree.NewSizeTreeEntry(1000, []string{"/file/one"})
+  e1 := sizetree.NewSizeTreeEntry(1000, []sizetree.SizeTreeFile{f1})
+
   item1 := st.MergeOrInsert(e1)
   assert.Nil(t, item1)
 
-  e2 := sizetree.NewSizeTreeEntry(1000, []string{"/test/two"})
+  e2 := sizetree.NewSizeTreeEntry(1000, []sizetree.SizeTreeFile{f2})
   item2 := st.MergeOrInsert(e2)
   assert.IsType(t, &sizetree.SizeTreeEntry{}, item2)
 
   files := item2.Files()
   assert.Equal(t, len(files), 2)
-  assert.Equal(t, files[0], "/file/one")
-  assert.Equal(t, files[1], "/test/two")
+  assert.Equal(t, files[0], f1)
+  assert.Equal(t, files[1], f2)
 
-  // fmt.Println(item2)
-  // fmt.Println(st.GetBySize(1000))
 }
 
 

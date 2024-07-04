@@ -2,6 +2,14 @@ package sizetree
 
 import "github.com/google/btree"
 
+
+// type SizeTreeFile is a representation of a single file sorted 
+// into the SizeTreeEntrys
+type SizeTreeFile struct {
+  Path string
+  Inode int64
+}
+
 // type SizeTree is a wrapper to google's btree, providing a
 // simple interface to manage a btree of filepaths and sizes 
 // for the purpose of the the fsdupscan utility only.
@@ -79,11 +87,11 @@ func (s *SizeTree) GetBySize(size int64) *SizeTreeEntry {
 // on the size of the file, and contains a slice of files which share this size.
 type SizeTreeEntry struct {
   Size  int64
-  files   []string
+  files   []SizeTreeFile
 }
 
 // NewSizeTreeEntry() returns a pointer to a SizeTreeEntry, with initialized parameters.
-func NewSizeTreeEntry (size int64, files []string) *SizeTreeEntry {
+func NewSizeTreeEntry (size int64, files []SizeTreeFile) *SizeTreeEntry {
   return &SizeTreeEntry{
     Size: size,
     files: files,
@@ -91,7 +99,7 @@ func NewSizeTreeEntry (size int64, files []string) *SizeTreeEntry {
 }
 
 // Append() method appends a file to the SizeTreeEntry.
-func (s *SizeTreeEntry) Append(file string) {
+func (s *SizeTreeEntry) Append(file SizeTreeFile) {
   s.files = append(s.files, file)
 }
 
@@ -106,7 +114,7 @@ func (s *SizeTreeEntry) Merge(other *SizeTreeEntry) {
 }
 
 // Files retuns a []string of file paths associated with this SizeTreeEntry 
-func (s *SizeTreeEntry) Files() []string {
+func (s *SizeTreeEntry) Files() []SizeTreeFile{
   if len(s.files) == 0 {
     return nil
   } else if s.files == nil {

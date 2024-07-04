@@ -5,45 +5,75 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
-func Walk(dir string, fileCh chan<- os.DirEntry, followSym bool) {
-  entries, err := readDirRegular(dir)
-  if err != nil {
-    // we shouldn't get here
-    // panic("something broke when reading dir in walk()")
-    panic(err)
+
+func Walk(dir string) (<-chan string, *sync.WaitGroup) {
+  var wg sync.WaitGroup
+  fileCh := make(chan string, 1)
+  wg.Add(1)
+  go WalkDir(dir, &wg, fileCh)
+
+  return fileCh, &wg
+}
+
+func WalkDir(dir string, wg *sync.WaitGroup, fileCh chan<- string) {
+  defer wg.Done()
+
+  visit := func (path string, file os.FileInfo, err error) error {
+    if file.IsDir() && path != dir {
+      wg.Add(1)
+      go WalkDir(path, wg, fileCh)
+      return filepath.SkipDir
+    }
+    if file.Mode().IsRegular() {
+      fileCh <- filepath.Join(path, file.Name())
+      slog.Debug("WalkDir visit file found", "path", path, "name", file.Name(), "size", file.Size())
+    }
+    return nil
   }
 
-  for _, entry := range entries {
-    if entry.IsDir() {
-      Walk(filepath.Join(dir, entry.Name()), fileCh, followSym)
-    } else if entry.Type().IsRegular() {
-      fileCh <- entry
-    } else if isSymlink(entry) {
-      if !followSym {
-        continue
-      }
-      // target, err := resolveSymlink(entry, dir)
-      // if err != nil {
-      //   panic(err)
-      // }
-      // 
-      // statTarget := target
-      // if !filepath.IsAbs(target) {
-      //   statTarget = filepath.Join(dir, target)
-      // }
-      // fileInfo, err := os.Stat(statTarget)
-      // if err != nil {
-      //   //TODO: what does a failed stat() mean here? broken symlink?
-      //   panic(err)
-      // }
-    } else {
-      slog.Debug("dirwalk::walk() unknown entry.Type()", "Type()", entry.Type())
-      continue
-    }
-  }
+  filepath.Walk(dir, visit)
 }
+
+// func Walk(dir string, fileCh chan<- os.DirEntry, followSym bool) {
+//   entries, err := readDirRegular(dir)
+//   if err != nil {
+//     // we shouldn't get here
+//     // panic("something broke when reading dir in walk()")
+//     panic(err)
+//   }
+//
+//   for _, entry := range entries {
+//     if entry.IsDir() {
+//       Walk(filepath.Join(dir, entry.Name()), fileCh, followSym)
+//     } else if entry.Type().IsRegular() {
+//       fileCh <- entry
+//     } else if isSymlink(entry) {
+//       if !followSym {
+//         continue
+//       }
+//       // target, err := resolveSymlink(entry, dir)
+//       // if err != nil {
+//       //   panic(err)
+//       // }
+//       // 
+//       // statTarget := target
+//       // if !filepath.IsAbs(target) {
+//       //   statTarget = filepath.Join(dir, target)
+//       // }
+//       // fileInfo, err := os.Stat(statTarget)
+//       // if err != nil {
+//       //   //TODO: what does a failed stat() mean here? broken symlink?
+//       //   panic(err)
+//       // }
+//     } else {
+//       slog.Debug("dirwalk::walk() unknown entry.Type()", "Type()", entry.Type())
+//       continue
+//     }
+//   }
+// }
 
 // readDirRegular reads the entries in a directory path
 func readDirRegular(dir string) ([]os.DirEntry, error) { 
