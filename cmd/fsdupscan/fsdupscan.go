@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -24,7 +25,6 @@ var (
 //and handle basic housekeeping tasks like counting positional arguments 
 //and handling arguments such as verson or help
 func setupCliArgs () {
-
   viper.SetDefault("verbose", false)
   viper.SetDefault("debug", false)
   viper.SetDefault("tickrate", 1000)
@@ -61,7 +61,6 @@ func setupCliArgs () {
   for _, arg := range flag.Args() {
     positionalArgs = append(positionalArgs, arg)
   }
-
 }
 
 // setupLogger wraps the various logger setup tasks for this program
@@ -95,5 +94,19 @@ func main() {
       }
     }  
   }()
+}
+
+func validateStartingDirs(dirs []string) (bool, error) {
+  for _, dir := range dirs {
+    info, err := os.Stat(dir)
+    if err != nil {
+      return false, errors.New("can't open path: "+ dir)
+    }
+    if !info.IsDir() {
+      return false, errors.New("path isn't dir:"+ dir)
+    }
+  }
+
+  return true, nil
 }
 
