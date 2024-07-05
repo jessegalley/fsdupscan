@@ -9,17 +9,6 @@ import (
 
 func TestDirwalk(t *testing.T) {
   basePath := "../../testdata/"
-  // basePath := "./testdata/"
-
-  // var wg sync.WaitGroup
-  // fileCh := make(chan os.DirEntry, 1)
-  
-  // wg.Add(1)
-  // go func ()  {
-  //   // defer wg.Done()
-  //   followSym := false
-  //   dirwalk.Walk(basePath, fileCh, followSym)
-  // }()
 
   fileCh, wgWalk := dirwalk.Walk(basePath)
   files := []*dirwalk.WalkedFile{}
@@ -28,13 +17,7 @@ func TestDirwalk(t *testing.T) {
       select {
       case entry, ok := <-fileCh:
         if ok {
-          // files = append(files, filepath.Join(basePath,entry.Name())) 
           files = append(files, entry) 
-          // fmt.Println(os.ModeSymlink)
-          // spew.Dump(entry)
-          // spew.Dump(entry.Type())
-          // fmt.Println(entry.Type())
-          // spew.Dump(entry.Info())
         } else {
           return
         }
@@ -45,10 +28,6 @@ func TestDirwalk(t *testing.T) {
   wgWalk.Wait()
   assert.Equal(t, 18, len(files))
 
-  // spew.Dump(files)
-  // for _, entry := range files {
-  //   // spew.Dump(entry)
-  // }
 }
 
 
