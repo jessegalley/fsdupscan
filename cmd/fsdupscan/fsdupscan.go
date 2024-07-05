@@ -6,7 +6,10 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	// "time"
 
+	"github.com/jessegalley/fsdupscan/internal/dirwalk"
+	"github.com/jessegalley/fsdupscan/internal/sizetree"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -78,23 +81,67 @@ func init() {
 }
 
 func main() { 
-  slog.Info("main", "working", "working")
   slog.Debug("pos args", "args", positionalArgs)
   slog.Debug("main", "threads", viper.GetInt("threads"))
-  dirCh := make(chan string, 1)
-  // add all of the paths provided as positionalArgs to the directory channel
-  // if there were no positional args provided, then assume CWD and add that
-  // to the directory channel
+
+  minSize := viper.GetInt("min")
+
+  // make sure all input arguments are acessible dirs 
+  // TODO: come up with a way to handle files as args too 
+  //       perhaps adding them directly to SizeTree
+  _, err := validateStartingDirs(positionalArgs)
+  if err != nil {
+    slog.Error("error checking input dirs", "err", err)
+    os.Exit(3)
+  }
+
+  slog.Info("starting scan", "dirs", positionalArgs)
+  fileCh, wg := dirwalk.Walk(positionalArgs...)
+
+  st := sizetree.New()
+
+
+  var filesScanned int64
+  var filesSkipped int64
+  var filesCompared int64
   go func ()  {
-    if len(positionalArgs) == 0 {
-      dirCh <- "."
-    } else {
-      for _, path := range positionalArgs {
-        dirCh <- path
+    for {
+      select {
+      case file, ok := <- fileCh:
+        if !ok {
+          slog.Debug("fileCh closed")
+          return
+        }
+
+        filesScanned++
+        if file.Size < int64(minSize) {
+          filesSkipped++
+          slog.Debug("skipping too small", "file", file.Path, "size", file.Size)
+          continue
+        }
+        filesCompared++
+        f1 := sizetree.SizeTreeFile{Path: file.Path, Inode: file.Inode}
+        e1 := sizetree.NewSizeTreeEntry(file.Size, []sizetree.SizeTreeFile{f1})
+        item := st.MergeOrInsert(e1)
+        if item != nil {
+          // trigger a hash check!
+          // slog.Info("main tree insert collision", "path", file.Path, "size", file.Size)
+        } 
+        if viper.GetBool("verbose") {
+          fmt.Println(file) // what should --verbose actually print?
+        }
       }
-    }  
+    }
   }()
+
+  wg.Wait()
+
+
+  // time.Sleep(1 * time.Second)
+  slog.Info("summary", "scanned", filesScanned, "skipped", filesSkipped, "compared", filesCompared)
+  
 }
+
 
 func validateStartingDirs(dirs []string) (bool, error) {
   for _, dir := range dirs {
