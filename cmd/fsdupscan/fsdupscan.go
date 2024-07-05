@@ -6,7 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	// "time"
+	"runtime"
 
 	"github.com/jessegalley/fsdupscan/internal/dirwalk"
 	"github.com/jessegalley/fsdupscan/internal/sizetree"
@@ -76,6 +76,8 @@ func setupLogger () {
 }
 
 func init() {
+  numCPUs := runtime.NumCPU()
+  runtime.GOMAXPROCS(numCPUs)
   setupCliArgs()
   setupLogger()
 }
@@ -137,7 +139,7 @@ func main() {
   wg.Wait()
 
 
-  // time.Sleep(1 * time.Second)
+  // time.Sleep(10 * time.Second)
   slog.Info("summary", "scanned", filesScanned, "skipped", filesSkipped, "compared", filesCompared)
   
 }
