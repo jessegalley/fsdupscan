@@ -40,13 +40,29 @@ func WalkDir(dir string, wg *sync.WaitGroup, fileCh chan<- *WalkedFile) {
   defer wg.Done()
 
   visit := func (path string, file os.FileInfo, err error) error {
+    // sometimes a file will get removed between the time it is listed  
+    // and the time where it is to be Stat'd here. If this is the case the 
+    // path will exist, but the actual FileInfo will be nil. so we wil 
+    // return the visit function early to prevent segfaults.
+    if file == nil {
+      slog.Debug("visit func: file is nil (deleted during scan)", "path", path )
+      return nil
+    }
+
+    // because of the sometimes nil FileInfo, to be safe we're going to return 
+    // early if for some reason we have a garbage (empty) path as well
+    if path == "" {
+      slog.Debug("visit func: empty file path, skipping", "path", path )
+      return nil
+    }
+
     if file.IsDir() && path != dir {
       wg.Add(1)
       go WalkDir(path, wg, fileCh)
       return filepath.SkipDir
     }
+
     if file.Mode().IsRegular() {
-      // spew.Dump(file.Sys().(*syscall.Stat_t).Ino)
       inode := file.Sys().(*syscall.Stat_t).Ino
       fileCh <- NewWalkedFile(filepath.Join(path, file.Name()), inode, file.Size())   
       slog.Debug("WalkDir visit file found", "path", path, "name", file.Name(), "size", file.Size())
