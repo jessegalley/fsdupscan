@@ -62,7 +62,10 @@ func WalkDir(dir string, wg *sync.WaitGroup, fileCh chan<- *WalkedFile) {
 
     if file.Mode().IsRegular() {
       inode := file.Sys().(*syscall.Stat_t).Ino
-      fileCh <- NewWalkedFile(filepath.Join(path, file.Name()), inode, file.Size())   
+      // fileCh <- NewWalkedFile(filepath.Join(path, file.Name()), inode, file.Size())   
+      // path var inside the visit function contains the full path of files, not
+      // just the parent dir
+      fileCh <- NewWalkedFile(path, inode, file.Size())   
       // slog.Debug("WalkDir visit file found", "path", path, "name", file.Name(), "size", file.Size())
     }
     return nil
