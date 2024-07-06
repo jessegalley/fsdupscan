@@ -8,6 +8,7 @@ import "github.com/google/btree"
 type SizeTreeFile struct {
   Path string
   Inode uint64
+  hash string
 }
 
 func NewSizeTreeFile(path string, inode uint64) *SizeTreeFile {
@@ -15,6 +16,14 @@ func NewSizeTreeFile(path string, inode uint64) *SizeTreeFile {
     Path: path,
     Inode: inode,
   }
+}
+
+func (s *SizeTreeFile) Hash() string {
+  return s.hash
+}
+
+func (s *SizeTreeFile) SetHash(hash string) {
+  s.hash = hash
 }
 
 // type SizeTree is a wrapper to google's btree, providing a
