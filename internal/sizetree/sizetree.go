@@ -8,7 +8,7 @@ import "github.com/google/btree"
 type SizeTreeFile struct {
   Path string
   Inode uint64
-  hash string
+  // hash string
 }
 
 func NewSizeTreeFile(path string, inode uint64) *SizeTreeFile {
@@ -18,13 +18,13 @@ func NewSizeTreeFile(path string, inode uint64) *SizeTreeFile {
   }
 }
 
-func (s *SizeTreeFile) Hash() string {
-  return s.hash
-}
-
-func (s *SizeTreeFile) SetHash(hash string) {
-  s.hash = hash
-}
+// func (s *SizeTreeFile) Hash() string {
+//   return s.hash
+// }
+//
+// func (s *SizeTreeFile) SetHash(hash string) {
+//   s.hash = hash
+// }
 
 // type SizeTree is a wrapper to google's btree, providing a
 // simple interface to manage a btree of filepaths and sizes 
@@ -104,6 +104,7 @@ func (s *SizeTree) GetBySize(size int64) *SizeTreeEntry {
 type SizeTreeEntry struct {
   Size  int64
   files   []SizeTreeFile
+  hashes  map[string][]*SizeTreeFile
 }
 
 // NewSizeTreeEntry() returns a pointer to a SizeTreeEntry, with initialized parameters.
@@ -111,6 +112,7 @@ func NewSizeTreeEntry (size int64, files []SizeTreeFile) *SizeTreeEntry {
   return &SizeTreeEntry{
     Size: size,
     files: files,
+    hashes: make(map[string][]*SizeTreeFile),
   }
 }
 
@@ -138,6 +140,10 @@ func (s *SizeTreeEntry) Files() []SizeTreeFile{
   }
 
   return s.files
+}
+
+func (s *SizeTreeEntry) AppendChecksum(hash string, stf *SizeTreeFile) {
+  s.hashes[hash] = append(s.hashes[hash], stf)
 }
 
 // Less() compares a SizeTreeEntry to another SizeTreeEntry 

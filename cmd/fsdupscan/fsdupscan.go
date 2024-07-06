@@ -7,8 +7,10 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/jessegalley/fsdupscan/internal/dirwalk"
+	"github.com/jessegalley/fsdupscan/internal/filechecksum"
 	"github.com/jessegalley/fsdupscan/internal/sizetree"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -106,6 +108,7 @@ func main() {
   var filesScanned int64
   var filesSkipped int64
   var filesCompared int64
+
   go func ()  {
     for {
       select {
@@ -127,6 +130,27 @@ func main() {
         item := st.MergeOrInsert(e1)
         if item != nil {
           // trigger a hash check!
+          ste := st.GetBySize(file.Size)
+          if ste == nil {
+            // defensive programming error so if some race conidtion happens we dont 
+            // panic with nil pointer dreferences 
+            panic("nil SizeTreeEntry pointer after size collision, this shouldn't happen.")
+          }
+          stfs := ste.Files()
+          if stfs == nil {
+            // more defensive programming to catch race cond
+            panic("nil/empty slice of sizetreefile after size collison, this shoudln't happen")
+          }
+          for _, stf := range stfs {
+            checksum, err := filechecksum.CalculateChecksum(stf.Path)
+            if err != nil {
+              // not sure why hash would fail, maybe nil path?
+              slog.Error("cant hash", "error", err)
+              panic("hashing of file failed. file:"+file.Path)
+            }
+            // stf.SetHash(checksum)
+            ste.AppendChecksum(checksum, &stf)
+          }
           // slog.Info("main tree insert collision", "path", file.Path, "size", file.Size)
         } 
         if viper.GetBool("verbose") {
@@ -139,7 +163,8 @@ func main() {
   wg.Wait()
 
 
-  // time.Sleep(10 * time.Second)
+  time.Sleep(10 * time.Second)
+  // slog.Debug("len(comparisons)", "len", len(comparisons))
   slog.Info("summary", "scanned", filesScanned, "skipped", filesSkipped, "compared", filesCompared)
   
 }

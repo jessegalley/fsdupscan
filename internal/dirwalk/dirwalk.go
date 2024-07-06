@@ -25,7 +25,7 @@ func NewWalkedFile(path string, inode uint64, size int64) *WalkedFile {
 
 func Walk(dirs ...string) (<-chan *WalkedFile, *sync.WaitGroup) {
   var wg sync.WaitGroup
-  fileCh := make(chan *WalkedFile, 1)
+  fileCh := make(chan *WalkedFile, 100)
   for _, dir := range dirs {
     wg.Add(1)
     go WalkDir(dir, &wg, fileCh)
