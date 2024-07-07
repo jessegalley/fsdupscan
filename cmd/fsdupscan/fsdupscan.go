@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
-	"time"
+	// "time"
 
 	"github.com/jessegalley/fsdupscan/internal/dirwalk"
 	"github.com/jessegalley/fsdupscan/internal/filechecksum"
@@ -142,7 +142,8 @@ func main() {
             panic("nil/empty slice of sizetreefile after size collison, this shoudln't happen")
           }
           for _, stf := range stfs {
-            checksum, err := filechecksum.CalculateChecksum(stf.Path)
+            // checksum, err := filechecksum.CalculateChecksum(stf.Path)
+            checksum, err := filechecksum.CalculateChecksumQuick(stf.Path)
             if err != nil {
               // not sure why hash would fail, maybe nil path?
               slog.Error("cant hash", "error", err)
@@ -163,7 +164,7 @@ func main() {
   wg.Wait()
 
 
-  time.Sleep(10 * time.Second)
+  // time.Sleep(10 * time.Second)
   // slog.Debug("len(comparisons)", "len", len(comparisons))
   slog.Info("summary", "scanned", filesScanned, "skipped", filesSkipped, "compared", filesCompared)
   

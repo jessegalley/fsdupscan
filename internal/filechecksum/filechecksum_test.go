@@ -14,7 +14,6 @@ func TestFileChecksum(t *testing.T) {
   if err != nil {
     t.Fatalf("checksum calc failed on %v with %v", file, err)
   }
-  // fmt.Println(checksum)
   assert.Equal(t, checksum, "1f9d7ebdff2be849d10147e7619245c882f94a39b60ebf5f798b9e3c5154a5a7")
 }
 
